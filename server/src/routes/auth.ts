@@ -8,10 +8,19 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
+    console.log('Registration attempt:', { email: req.body.email, name: req.body.name });
+    
     const { email, password, name } = req.body;
     
+    if (!email || !password || !name) {
+      console.log('Missing required fields:', { email: !!email, password: !!password, name: !!name });
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
     // Check if user exists
     const userCheck = await query('SELECT id FROM users WHERE email = $1', [email]);
+    console.log('User check result:', { exists: userCheck.rows.length > 0 });
+    
     if (userCheck.rows.length > 0) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -25,14 +34,18 @@ router.post('/register', async (req, res) => {
       'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name',
       [email, hashedPassword, name]
     );
+    console.log('User created:', result.rows[0]);
 
     const user = result.rows[0];
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'default_secret');
 
     res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
   } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Registration error details:', error);
+    if (error.code === '23505') { // Unique violation
+      return res.status(400).json({ message: 'Email already registered' });
+    }
+    res.status(500).json({ message: 'Server error', details: error.message });
   }
 });
 

@@ -15,14 +15,44 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
-// Routes
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Task Management API',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      boards: '/api/boards',
+      lists: '/api/lists',
+      cards: '/api/cards'
+    }
+  });
+});
+
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/boards', boardRoutes);
 app.use('/api/lists', listRoutes);
 app.use('/api/cards', cardRoutes);
+
+// Error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong!', error: err.message });
+});
+
+// Handle 404 routes
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
 
 // Initialize database and start server
 initializeDatabase()
@@ -31,6 +61,11 @@ initializeDatabase()
       console.log(`Server is running on port ${port}`);
       console.log(`Local: http://localhost:${port}`);
       console.log(`Network: http://${getLocalIpAddress()}:${port}`);
+      console.log('\nAPI Documentation:');
+      console.log('- POST /api/auth/register - Register a new user');
+      console.log('- POST /api/auth/login - Login user');
+      console.log('- GET /api/boards - Get all boards (requires auth)');
+      console.log('- POST /api/boards - Create a board (requires auth)');
     });
   })
   .catch((error) => {

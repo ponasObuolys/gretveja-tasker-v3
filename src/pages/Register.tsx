@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
-import { createUser, generateToken } from '../lib/auth';
+import { createUser } from '../lib/auth';
 import { useAuthStore } from '../stores/authStore';
 
 interface RegisterForm {
@@ -24,8 +24,11 @@ export default function Register() {
       // Create user and get the user data back
       const user = await createUser(data.email, data.password, data.name);
       
-      // Generate token for the new user
-      const token = await generateToken(user.id);
+      // Get token from localStorage (it was stored during createUser)
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication failed');
+      }
       
       // Set auth state
       setAuth({ 
